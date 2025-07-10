@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: page-hoppers-db
+    environment:
+      POSTGRES_USER: pagehoppers_user
+      POSTGRES_PASSWORD: password314
+      POSTGRES_DB: pagehoppers_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pagehoppers_user -d pagehoppers_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./page-hoppers-backend
+    container_name: page-hoppers-backend
+    ports:
+      - "8080:8080"
+    environment:
+      IN_DOCKER: "true"
+      DATABASE_URL: postgres://pagehoppers_user:password314@postgres:5432/pagehoppers_db?sslmode=disable
+      JWT_SECRET: your_jwt_secret_here
+      PORT: 8080
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data: 

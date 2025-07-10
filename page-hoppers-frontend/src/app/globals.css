@@ -1,0 +1,19 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bubblegum: #F7A9A8;
+  --color-sky: #A7D8F1;
+  --color-lemon: #FFF5A5;
+  --color-powder: #FFFDF9;
+  --color-lavender: #E9DFF6;
+  --color-charcoal: #333333;
+  --color-coolgray: #6B7280;
+  --color-leaf: #A9E5BB;
+  --color-coral: #FF6B6B;
+}
+
+body {
+  background: var(--color-powder);
+  color: var(--color-charcoal);
+  font-family: Arial, Helvetica, sans-serif;
+}

@@ -56,7 +56,7 @@ func (h *ReadingLogHandler) CreateReadingLog(w http.ResponseWriter, r *http.Requ
 
 	// Validate required fields
 	if req.Title == "" || req.Status == "" || req.Date == "" {
-		http.Error(w, "Title, status, and date are required", http.StatusBadRequest)
+		http.Error(w, "Title, status, and date username", http.StatusBadRequest)
 		return
 	}
 

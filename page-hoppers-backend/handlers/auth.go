@@ -120,15 +120,14 @@ func (h *AuthHandler) GetChildren(w http.ResponseWriter, r *http.Request) {
 }
 
 type CreateChildRequest struct {
-	Username string `json:"username"`
-	Name     string `json:"name"`
-	Age      int    `json:"age"`
-	PIN      string `json:"pin"`
+	Name string `json:"name"`
+	Age  int    `json:"age"`
+	PIN  string `json:"pin"`
 }
 
 type ChildResponse struct {
-	ID       uint   `json:"id"`
-	Username string `json:"username"`
+	ID   uint   `json:"id"`
+	Name string `json:"name"`
 }
 
 func (h *AuthHandler) CreateChild(w http.ResponseWriter, r *http.Request) {
@@ -144,8 +143,8 @@ func (h *AuthHandler) CreateChild(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Username == "" || req.PIN == "" || req.Name == "" || req.Age <= 0 {
-		http.Error(w, "Username, Name, Age, and PIN are required", http.StatusBadRequest)
+	if req.PIN == "" || req.Name == "" || req.Age <= 0 {
+		http.Error(w, "Name, Age, and PIN username", http.StatusBadRequest)
 		return
 	}
 
@@ -156,7 +155,6 @@ func (h *AuthHandler) CreateChild(w http.ResponseWriter, r *http.Request) {
 	}
 
 	child := models.User{
-		Username: req.Username,
 		Name:     req.Name,
 		Age:      req.Age,
 		PIN:      string(hashedPIN),
@@ -169,7 +167,7 @@ func (h *AuthHandler) CreateChild(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.NewEncoder(w).Encode(ChildResponse{ID: child.ID, Username: child.Username})
+	json.NewEncoder(w).Encode(ChildResponse{ID: child.ID, Name: child.Name})
 }
 
 type ParentRegisterRequest struct {
@@ -186,7 +184,7 @@ func (h *AuthHandler) ParentRegister(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if req.Name == "" || req.Email == "" || req.Password == "" {
-		http.Error(w, "Name, email, and password are required", http.StatusBadRequest)
+		http.Error(w, "Name, email, and password username", http.StatusBadRequest)
 		return
 	}
 
@@ -206,7 +204,7 @@ func (h *AuthHandler) ParentRegister(w http.ResponseWriter, r *http.Request) {
 
 	// Create parent user
 	parent := models.User{
-		Username: req.Name, // Use name as username for now
+		Name:     req.Name,
 		Email:    req.Email,
 		Password: string(hashedPassword),
 		Role:     "parent",

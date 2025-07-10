@@ -8,7 +8,6 @@ import (
 // User model - represents both parent and child users
 type User struct {
 	gorm.Model
-	Username     string    `json:"username" gorm:"uniqueIndex"`
 	Name         string    `json:"name"` // Child's real name
 	Age          int       `json:"age"`
 	Password     string    `json:"-"` // Password hash, not exposed in JSON

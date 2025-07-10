@@ -5,6 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
     "gorm.io/gorm"
     "net/http"
+    "golang.org/x/crypto/bcrypt"
 )
 
 // DB will be used to interact with the database
@@ -13,7 +14,7 @@ var DB *gorm.DB
 // Parent Login Handler
 func ParentLogin(c *gin.Context) {
     var loginDetails struct {
-        Username string `json:"username"`
+        Email string `json:"email"`
         Password string `json:"password"`
     }
 
@@ -25,7 +26,7 @@ func ParentLogin(c *gin.Context) {
 
     var parent models.User
     // Look for the parent in the database with the provided credentials
-    if err := DB.Where("username = ? AND password = ?", loginDetails.Username, loginDetails.Password).First(&parent).Error; err != nil {
+    if err := DB.Where("email = ? AND password = ?", loginDetails.Email, loginDetails.Password).First(&parent).Error; err != nil {
         c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
         return
     }
@@ -37,23 +38,27 @@ func ParentLogin(c *gin.Context) {
 // Child Login Handler
 func ChildLogin(c *gin.Context) {
     var loginDetails struct {
-        Username string `json:"username"`
-        Password string `json:"password"`
+        ChildID uint   `json:"childId"`
+        PIN     string `json:"pin"`
     }
 
-    // Parse the incoming JSON
     if err := c.ShouldBindJSON(&loginDetails); err != nil {
         c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
         return
     }
 
     var child models.User
-    // Look for the child in the database with the provided credentials
-    if err := DB.Where("username = ? AND password = ?", loginDetails.Username, loginDetails.Password).First(&child).Error; err != nil {
+    if err := DB.Where("id = ? AND role = ?", loginDetails.ChildID, "child").First(&child).Error; err != nil {
         c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
         return
     }
 
-    // Respond with the child user info
+    // Compare the hashed PIN
+    if err := bcrypt.CompareHashAndPassword([]byte(child.PIN), []byte(loginDetails.PIN)); err != nil {
+        c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid PIN"})
+        return
+    }
+
+    // Respond with the child user info (or a token, as needed)
     c.JSON(http.StatusOK, child)
 }

@@ -68,7 +68,7 @@ export default function ChildDashboard() {
       });
       if (res.ok) {
         const logs = await res.json();
-        setReadingLogs(logs);
+        setReadingLogs(logs || []);
       }
     } catch (err) {
       console.error('Failed to fetch reading logs:', err);
@@ -295,7 +295,7 @@ export default function ChildDashboard() {
             <h2 className="text-xl font-semibold mb-4 text-bubblegum">Your Reading Log</h2>
             {logsLoading ? (
               <div className="text-center text-charcoal">Loading reading logs...</div>
-            ) : readingLogs.length > 0 ? (
+            ) : (readingLogs && readingLogs.length > 0) ? (
               <div className="space-y-3 max-h-96 overflow-y-auto">
                 {readingLogs.map(log => (
                   <div key={log.id} className="flex items-center gap-3 bg-lemon/30 p-3 rounded-xl border-2 border-lemon">

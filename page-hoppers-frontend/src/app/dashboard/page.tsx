@@ -2,6 +2,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { createChild } from '@/api/children';
 
 interface ChildProfile {
   id: number;
@@ -12,11 +13,12 @@ interface ChildProfile {
 }
 
 export default function ParentDashboard() {
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
   const [children, setChildren] = useState<ChildProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [newChildName, setNewChildName] = useState("");
-  const [newChildRealName, setNewChildRealName] = useState("");
+  const [newChildFirstName, setNewChildFirstName] = useState("");
+  const [newChildLastName, setNewChildLastName] = useState("");
   const [newChildAge, setNewChildAge] = useState("");
   const [newChildPin, setNewChildPin] = useState("");
   const [addError, setAddError] = useState("");
@@ -39,7 +41,7 @@ export default function ParentDashboard() {
         return;
       }
       try {
-        const res = await fetch('http://localhost:8080/api/children', {
+        const res = await fetch(`${API_URL}/api/children`, {
           headers: {
             'Authorization': `Bearer ${parentToken}`,
           },
@@ -70,36 +72,24 @@ export default function ParentDashboard() {
     e.preventDefault();
     setAddError("");
     setAddSuccess("");
-    const parentToken = localStorage.getItem('parentToken');
-    if (!parentToken) {
-      router.push('/login');
-      return;
-    }
     try {
-      const res = await fetch('/api/children', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${parentToken}`,
-        },
-        body: JSON.stringify({
-          username: newChildName,
-          name: newChildRealName,
-          age: Number(newChildAge),
-          pin: newChildPin
-        }),
-      });
-      if (!res.ok) {
-        throw new Error('Failed to add child');
+      const parentToken = localStorage.getItem('parentToken');
+      if (!parentToken) {
+        router.push('/login');
+        return;
       }
+      const data = await createChild({
+        name: `${newChildFirstName} ${newChildLastName}`,
+        age: Number(newChildAge),
+        pin: newChildPin,
+        token: parentToken,
+      });
       setAddSuccess('Child added!');
-      setNewChildName("");
-      setNewChildRealName("");
+      setNewChildFirstName("");
+      setNewChildLastName("");
       setNewChildAge("");
       setNewChildPin("");
-      // Refresh children list
-      const data = await res.json();
-      setChildren(prev => [...prev, { id: data.id, username: data.username, name: newChildRealName, age: Number(newChildAge) }]);
+      setChildren(prev => [...prev, { id: data.id, username: data.username, name: `${newChildFirstName} ${newChildLastName}`, age: Number(newChildAge) }]);
     } catch (err) {
       setAddError('Could not add child');
     }
@@ -180,10 +170,18 @@ export default function ParentDashboard() {
           <h2 className="text-xl font-semibold mb-2 text-bubblegum">Add a Child</h2>
           <input
             type="text"
-            placeholder="Child's Name"
+            placeholder="First Name"
             className="border-2 border-sky rounded px-3 py-2 focus:outline-none focus:border-bubblegum"
-            value={newChildRealName}
-            onChange={e => setNewChildRealName(e.target.value)}
+            value={newChildFirstName}
+            onChange={e => setNewChildFirstName(e.target.value)}
+            required
+          />
+          <input
+            type="text"
+            placeholder="Last Name"
+            className="border-2 border-sky rounded px-3 py-2 focus:outline-none focus:border-bubblegum"
+            value={newChildLastName}
+            onChange={e => setNewChildLastName(e.target.value)}
             required
           />
           <input

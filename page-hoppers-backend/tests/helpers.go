@@ -35,9 +35,8 @@ func CreateTestParent(db *gorm.DB, name, email, password string) *models.User {
 }
 
 // CreateTestChild creates a test child user in the database
-func CreateTestChild(db *gorm.DB, username, name string, age int, parentID uint, pin string) *models.User {
+func CreateTestChild(db *gorm.DB, name string, age int, parentID uint, pin string) *models.User {
 	child := &models.User{
-		Username: username,
 		Name:     name,
 		Age:      age,
 		PIN:      pin, // Note: In real tests, this should be hashed

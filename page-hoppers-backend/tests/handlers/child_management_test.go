@@ -23,7 +23,6 @@ func TestCreateChildSuccess(t *testing.T) {
 
 	// Prepare child creation payload
 	payload := handlers.CreateChildRequest{
-		Username: "child1",
 		Name:     "Child One",
 		Age:      8,
 		PIN:      "1234",

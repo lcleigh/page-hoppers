@@ -12,6 +12,7 @@ export default function ChildLogin() {
   const [children, setChildren] = useState<ChildProfile[]>([]);
   const [selectedChild, setSelectedChild] = useState<number | null>(null);
   const [pin, setPin] = useState('');
+  const [showPin, setShowPin] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
 
@@ -121,17 +122,45 @@ export default function ChildLogin() {
               <label htmlFor="pin" className="sr-only">
                 Enter your PIN
               </label>
-              <input
-                id="pin"
-                name="pin"
-                type="password"
-                maxLength={4}
-                required
-                className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-center text-2xl"
-                placeholder="Enter your PIN"
-                value={pin}
-                onChange={(e) => setPin(e.target.value)}
-              />
+              <div style={{ position: "relative" }}>
+                <input
+                  id="pin"
+                  name="pin"
+                  type={showPin ? "text" : "password"}
+                  value={pin}
+                  onChange={e => setPin(e.target.value)}
+                  placeholder="PIN"
+                  maxLength={4}
+                  className="appearance-none rounded-md relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-center text-2xl"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPin((prev) => !prev)}
+                  style={{
+                    position: "absolute",
+                    right: 8,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer"
+                  }}
+                  aria-label={showPin ? "Hide PIN" : "Show PIN"}
+                >
+                  {showPin ? (
+                    // Eye-off icon (SVG)
+                    <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-5 0-9.27-3.11-11-7.5a11.05 11.05 0 0 1 5.17-5.61M1 1l22 22" />
+                    </svg>
+                  ) : (
+                    // Eye icon (SVG)
+                    <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                      <circle cx="12" cy="12" r="3" />
+                      <path d="M2.05 12C3.81 7.61 7.88 4.5 12 4.5s8.19 3.11 9.95 7.5c-1.76 4.39-5.83 7.5-9.95 7.5S3.81 16.39 2.05 12z" />
+                    </svg>
+                  )}
+                </button>
+              </div>
             </div>
             <button
               type="submit"

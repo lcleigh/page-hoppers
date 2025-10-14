@@ -3,6 +3,10 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createChild } from '@/api/children';
+import ChildLoginModal from '@/components/modals/ChildLoginModal';
+import handleLogin  from '@/app/login/page';
+
+
 
 interface ChildProfile {
   id: number;
@@ -25,8 +29,9 @@ export default function ParentDashboard() {
   const [addSuccess, setAddSuccess] = useState("");
   
   // Child login state
-  const [showLoginModal, setShowLoginModal] = useState(false);
-  const [selectedChild, setSelectedChild] = useState<ChildProfile | null>(null);
+  const [showChildLoginModal, setShowChildLoginModal] = useState(false);
+  const [selectedChildName, setSelectedChildName] = useState<string | undefined>();
+  const [childPinError, setChildPinError] = useState<string | undefined>();
   const [childPin, setChildPin] = useState("");
   const [childLoginError, setChildLoginError] = useState("");
   const [childLoginLoading, setChildLoginLoading] = useState(false);
@@ -95,16 +100,31 @@ export default function ParentDashboard() {
     }
   };
 
+  const handleChildSelect = (childName: string) => {
+    setSelectedChildName(childName);
+    setShowChildLoginModal(true);
+    setChildPinError(undefined); // reset error
+  };
+
+  const handleChildPinSubmit = async (pin: string) => {
+
+    // Your PIN validation logic here (API call, etc.)
+    // On success:
+    //   setShowChildLoginModal(false);
+    //   ...navigate or update state...
+    // On error:
+    //   setChildPinError("Invalid PIN");
+  };
+
   const handleChildLogin = (child: ChildProfile) => {
-    setSelectedChild(child);
-    setChildPin("");
-    setChildLoginError("");
-    setShowLoginModal(true);
+    setSelectedChildName(child.name || child.username);
+    setShowChildLoginModal(true);
+    setChildPinError(undefined); // reset error
   };
 
   const handleChildLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedChild) return;
+    if (!selectedChildName) return;
 
     setChildLoginLoading(true);
     setChildLoginError("");
@@ -116,7 +136,7 @@ export default function ParentDashboard() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          childId: selectedChild.id,
+          childId: selectedChildName, // Assuming selectedChildName is the ID
           pin: childPin
         }),
       });
@@ -129,12 +149,12 @@ export default function ParentDashboard() {
       
       // Store child token and redirect to child dashboard
       localStorage.setItem('childToken', data.token);
-      localStorage.setItem('childId', selectedChild.id.toString());
-      localStorage.setItem('childName', selectedChild.name || selectedChild.username);
+      localStorage.setItem('childId', selectedChildName);
+      localStorage.setItem('childName', selectedChildName);
       
       // Close modal and redirect
-      setShowLoginModal(false);
-      setSelectedChild(null);
+      setShowChildLoginModal(false);
+      setSelectedChildName(undefined);
       setChildPin("");
       
       // Redirect to child dashboard (you'll need to create this)
@@ -249,55 +269,13 @@ export default function ParentDashboard() {
       </div>
 
       {/* Child Login Modal */}
-      {showLoginModal && selectedChild && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full mx-4 border-2 border-bubblegum">
-            <h2 className="text-2xl font-bold text-bubblegum mb-4">
-              Login as {selectedChild.name || selectedChild.username}
-            </h2>
-            <form onSubmit={handleChildLoginSubmit} className="space-y-4">
-              <div>
-                <label className="block text-charcoal font-medium mb-2">Enter PIN:</label>
-                <input
-                  type="password"
-                  value={childPin}
-                  onChange={(e) => setChildPin(e.target.value)}
-                  className="w-full border-2 border-sky rounded px-3 py-2 focus:outline-none focus:border-bubblegum"
-                  placeholder="4-digit PIN"
-                  pattern="[0-9]{4}"
-                  maxLength={4}
-                  required
-                  autoFocus
-                />
-              </div>
-              {childLoginError && (
-                <div className="text-coral text-sm">{childLoginError}</div>
-              )}
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowLoginModal(false);
-                    setSelectedChild(null);
-                    setChildPin("");
-                    setChildLoginError("");
-                  }}
-                  className="flex-1 px-4 py-2 bg-coolgray text-white font-bold rounded-xl hover:bg-charcoal transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={childLoginLoading}
-                  className="flex-1 px-4 py-2 bg-bubblegum text-white font-bold rounded-xl hover:bg-lemon hover:text-charcoal transition disabled:opacity-50"
-                >
-                  {childLoginLoading ? 'Logging in...' : 'Login'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <ChildLoginModal
+        isOpen={showChildLoginModal}
+        onClose={() => setShowChildLoginModal(false)}
+        onSubmit={handleLogin}
+        childName={selectedChildName}
+        error={childPinError}
+      />
     </div>
   );
 } 

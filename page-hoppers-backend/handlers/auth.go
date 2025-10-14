@@ -184,7 +184,7 @@ func (h *AuthHandler) ParentRegister(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if req.Name == "" || req.Email == "" || req.Password == "" {
-		http.Error(w, "Name, email, and password username", http.StatusBadRequest)
+		http.Error(w, "Name, email, and password are required", http.StatusBadRequest)
 		return
 	}
 

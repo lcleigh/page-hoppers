@@ -42,7 +42,7 @@ func (s *Server) registerRoutes() {
 
     // Protected routes
     api := s.Router.PathPrefix("/api").Subrouter()
-    api.Use(authMiddleware) // You can move this to server.go too
+    api.Use(authMiddleware)
 
     api.HandleFunc("/children", s.AuthHandler.GetChildren).Methods("GET")
     api.HandleFunc("/children", s.AuthHandler.CreateChild).Methods("POST")

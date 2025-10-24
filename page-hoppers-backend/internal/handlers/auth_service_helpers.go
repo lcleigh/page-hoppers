@@ -6,7 +6,7 @@ import (
 	"time"
 	
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/lcleigh/page-hoppers-backend/models"
+	"github.com/lcleigh/page-hoppers-backend/internal/models"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )

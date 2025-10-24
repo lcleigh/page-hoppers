@@ -1,4 +1,6 @@
-# Page Hoppers - Reading Tracker for Children
+# 🌟 Welcome to Page Hoppers!
+
+This project helps kids track the books they read 📚✨
 
 A web application that helps parents track their children's reading progress both in and out of school. Built with React/Next.js frontend and Go backend.
 
@@ -24,7 +26,7 @@ A web application that helps parents track their children's reading progress bot
 - [Node.js](https://nodejs.org/) (v18+)
 - [npm](https://www.npmjs.com/) or [yarn](https://yarnpkg.com/)
 
-## Local Development Setup
+## 💻 Local Development Setup
 
 ### 1. Clone the Repository
 
@@ -50,39 +52,47 @@ docker-compose up
 docker-compose up -d
 ```
 
-**Database Details:**
+**Database Details (Docker defaults):**
 - Host: `localhost`
 - Port: `5432`
-- User: `pagehoppers_user`
-- Password: `password314`
-- Database: `pagehoppers_db`
+- User: <from your .env file>
+- Password: <from your .env file>
+- Database: <from your .env file>
+
 
 ### 3. Backend Setup (Local Development Option)
 
 If you prefer to run the backend locally (outside Docker):
 
-Navigate to the backend directory:
+1. Navigate to the backend directory:
 
 ```bash
 cd page-hoppers-backend
 ```
 
-Install Go dependencies:
+2. Install Go dependencies:
 
 ```bash
 go mod tidy
 ```
 
-Create environment file:
+3. Create a local .env file (this file is ignored by Git):
 
 ```bash
 # Create .env file
-cat > .env << EOF
-DATABASE_URL=postgres://pagehoppers_user:password314@localhost:5432/pagehoppers_db?sslmode=disable
-JWT_SECRET=your-super-secret-key-replace-in-production
-PORT=8080
-EOF
+touch .env
 ```
+
+Add your own credentials inside .env:
+
+```bash
+DATABASE_URL=postgres://<YOUR_DB_USER>:<YOUR_DB_PASSWORD>@localhost:5432/<YOUR_DB_NAME>?sslmode=disable
+JWT_SECRET=<YOUR_SECRET_KEY>
+PORT=8080
+```
+
+💡 You can use any username/password combination you like when running locally.
+If using Docker, make sure they match the environment variables defined in your docker-compose.yml.
 
 Run database migrations:
 
@@ -90,7 +100,7 @@ Run database migrations:
 go run scripts/migrate.go
 ```
 
-Create a test parent user:
+(Optional) Create a test parent user:
 
 ```bash
 go run scripts/create_test_parent.go
@@ -99,7 +109,7 @@ go run scripts/create_test_parent.go
 Start the backend server:
 
 ```bash
-go run main.go
+go run ./cmd/api/main.go
 ```
 
 The backend will be available at `http://localhost:8080`

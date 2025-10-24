@@ -12,8 +12,8 @@ import (
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"github.com/lcleigh/page-hoppers-backend/handlers"
-    "github.com/lcleigh/page-hoppers-backend/models"
+	"github.com/lcleigh/page-hoppers-backend/internal/api"
+    "github.com/lcleigh/page-hoppers-backend/internal/repository"
 	gorillahandlers "github.com/gorilla/handlers"
 )
 

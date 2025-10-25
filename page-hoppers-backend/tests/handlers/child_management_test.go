@@ -8,8 +8,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/lcleigh/page-hoppers-backend/models"
-	"github.com/lcleigh/page-hoppers-backend/handlers"
+	"page-hoppers-backend/internal/models"
+	"page-hoppers-backend/internal/handlers"
 )
 
 // TestCreateChildSuccess tests creating a child for a parent

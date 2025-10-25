@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"github.com/lcleigh/page-hoppers-backend/internal/models"
+	"page-hoppers-backend/internal/models"
 	"github.com/gin-gonic/gin"
     "gorm.io/gorm"
     "net/http"

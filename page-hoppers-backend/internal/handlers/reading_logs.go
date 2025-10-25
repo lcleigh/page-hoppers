@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strconv"
 	"time"
-	"github.com/lcleigh/page-hoppers-backend/internal/models"
+	"page-hoppers-backend/internal/models"
 	"gorm.io/gorm"
 )
 

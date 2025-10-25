@@ -5,8 +5,8 @@ import (
 	"os"
 
 	"github.com/joho/godotenv"
-	"github.com/lcleigh/page-hoppers-backend/internal/repository"
-	"github.com/lcleigh/page-hoppers-backend/internal/server"
+	"page-hoppers-backend/internal/repository"
+	"page-hoppers-backend/internal/server"
 )
 
 func main() {

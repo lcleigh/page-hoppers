@@ -10,7 +10,7 @@ import (
     "github.com/golang-jwt/jwt/v5"
     "github.com/gorilla/mux"
     gorillahandlers "github.com/gorilla/handlers"
-    "github.com/lcleigh/page-hoppers-backend/internal/handlers"
+    "page-hoppers-backend/internal/handlers"
     "gorm.io/gorm"
 )
 

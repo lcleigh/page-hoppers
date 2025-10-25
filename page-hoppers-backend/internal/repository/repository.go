@@ -4,11 +4,12 @@ import (
 	"log"
 	"os"
 
-	"github.com/lcleigh/page-hoppers-backend/internal/models"
+	"page-hoppers-backend/internal/models"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
+// DATABASE SETUP
 func InitDB() *gorm.DB {
 	dsn := os.Getenv("DATABASE_URL")
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})

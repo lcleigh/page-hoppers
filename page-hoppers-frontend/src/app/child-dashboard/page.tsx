@@ -1,6 +1,8 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import BookSearch from '@/components/BookSearch';
+import ReadingLog from '@/components/ReadingLog';
 
 interface BookResult {
   key: string;
@@ -9,24 +11,10 @@ interface BookResult {
   cover_i?: number;
 }
 
-interface ReadingLog {
-  id: number;
-  title: string;
-  author?: string;
-  status: 'started' | 'completed';
-  date: string;
-  open_library_key?: string;
-  cover_id?: number;
-  created_at: string;
-}
 
 export default function ChildDashboard() {
   const [childName, setChildName] = useState('');
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [searchResults, setSearchResults] = useState<BookResult[]>([]);
-  const [searchLoading, setSearchLoading] = useState(false);
-  const [searchError, setSearchError] = useState('');
   const [showLogModal, setShowLogModal] = useState(false);
   const [selectedBook, setSelectedBook] = useState<BookResult | null>(null);
   const [logType, setLogType] = useState<'completed' | 'started'>('completed');
@@ -36,8 +24,6 @@ export default function ChildDashboard() {
   const [showAddBookModal, setShowAddBookModal] = useState(false);
   const [manualBookTitle, setManualBookTitle] = useState('');
   const [manualBookAuthor, setManualBookAuthor] = useState('');
-  const [readingLogs, setReadingLogs] = useState<ReadingLog[]>([]);
-  const [logsLoading, setLogsLoading] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -51,54 +37,13 @@ export default function ChildDashboard() {
     setLoading(false);
     // Set default date to today
     setSelectedDate(new Date().toISOString().split('T')[0]);
-    fetchReadingLogs();
   }, [router]);
-
-  const fetchReadingLogs = async () => {
-    const childToken = localStorage.getItem('childToken');
-    if (!childToken) return;
-
-    setLogsLoading(true);
-    try {
-      const res = await fetch('http://localhost:8080/api/reading-logs', {
-        headers: {
-          'Authorization': `Bearer ${childToken}`,
-          'Content-Type': 'application/json',
-        },
-      });
-      if (res.ok) {
-        const logs = await res.json();
-        setReadingLogs(logs || []);
-      }
-    } catch (err) {
-      console.error('Failed to fetch reading logs:', err);
-    } finally {
-      setLogsLoading(false);
-    }
-  };
 
   const handleLogout = () => {
     localStorage.removeItem('childToken');
     localStorage.removeItem('childId');
     localStorage.removeItem('childName');
     router.push('/');
-  };
-
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSearchLoading(true);
-    setSearchError('');
-    setSearchResults([]);
-    try {
-      const res = await fetch(`https://openlibrary.org/search.json?q=${encodeURIComponent(searchTerm)}`);
-      if (!res.ok) throw new Error('Failed to fetch books');
-      const data = await res.json();
-      setSearchResults(data.docs.slice(0, 10)); // Show top 10 results
-    } catch (err) {
-      setSearchError('Could not fetch books.');
-    } finally {
-      setSearchLoading(false);
-    }
   };
 
   const handleLogBook = (book: BookResult) => {
@@ -142,7 +87,8 @@ export default function ChildDashboard() {
         setLogSuccess(`"${selectedBook.title}" logged as ${action} on ${selectedDate}!`);
         setShowLogModal(false);
         setSelectedBook(null);
-        fetchReadingLogs(); // Refresh the reading logs
+        // Refresh the page to update reading logs
+        window.location.reload();
       } else {
         const errorData = await res.json();
         setLogError(errorData.message || 'Failed to log book');
@@ -193,7 +139,8 @@ export default function ChildDashboard() {
         setShowAddBookModal(false);
         setManualBookTitle('');
         setManualBookAuthor('');
-        fetchReadingLogs(); // Refresh the reading logs
+        // Refresh the page to update reading logs
+        window.location.reload();
       } else {
         const errorData = await res.json();
         setLogError(errorData.message || 'Failed to log book');
@@ -203,9 +150,6 @@ export default function ChildDashboard() {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString();
-  };
 
   if (loading) {
     return (
@@ -231,107 +175,13 @@ export default function ChildDashboard() {
         
         <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Book Search Section */}
-          <div className="bg-white/80 p-6 rounded-xl shadow border-2 border-sky">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold text-bubblegum">Search for Books</h2>
-              <button
-                onClick={handleAddManualBook}
-                className="px-3 py-1 bg-lemon text-charcoal font-bold rounded-xl hover:bg-bubblegum hover:text-white transition border-2 border-bubblegum text-sm"
-              >
-                Add Book Manually
-              </button>
-            </div>
-            <form onSubmit={handleSearch} className="flex gap-2 mb-4">
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                placeholder="Title, author, or keyword"
-                className="flex-1 border-2 border-sky rounded px-3 py-2 focus:outline-none focus:border-bubblegum"
-                required
-              />
-              <button
-                type="submit"
-                className="bg-bubblegum text-white font-bold rounded-xl px-4 py-2 hover:bg-lemon hover:text-charcoal transition border-2 border-sky"
-                disabled={searchLoading}
-              >
-                {searchLoading ? 'Searching...' : 'Search'}
-              </button>
-            </form>
-            {searchError && <div className="text-coral text-sm mb-2">{searchError}</div>}
-            {searchResults.length > 0 && (
-              <ul className="space-y-4 max-h-96 overflow-y-auto">
-                {searchResults.map(book => (
-                  <li key={book.key} className="flex items-center gap-4 bg-lemon/30 p-3 rounded-xl border-2 border-lemon">
-                    {book.cover_i ? (
-                      <img
-                        src={`https://covers.openlibrary.org/b/id/${book.cover_i}-S.jpg`}
-                        alt={book.title}
-                        className="w-12 h-16 rounded shadow"
-                      />
-                    ) : (
-                      <div className="w-12 h-16 bg-coolgray rounded flex items-center justify-center text-white font-bold text-xl">
-                        ?
-                      </div>
-                    )}
-                    <div className="flex-1">
-                      <div className="font-bold text-charcoal">{book.title}</div>
-                      <div className="text-sm text-coolgray">{book.author_name?.join(', ')}</div>
-                    </div>
-                    <button
-                      onClick={() => handleLogBook(book)}
-                      className="px-3 py-1 bg-sky text-charcoal font-bold rounded-xl hover:bg-bubblegum hover:text-white transition border-2 border-bubblegum"
-                    >
-                      Log Book
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+          <BookSearch 
+            onLogBook={handleLogBook}
+            onAddManualBook={handleAddManualBook}
+          />
 
           {/* Reading Logs Section */}
-          <div className="bg-white/80 p-6 rounded-xl shadow border-2 border-sky">
-            <h2 className="text-xl font-semibold mb-4 text-bubblegum">Your Reading Log</h2>
-            {logsLoading ? (
-              <div className="text-center text-charcoal">Loading reading logs...</div>
-            ) : (readingLogs && readingLogs.length > 0) ? (
-              <div className="space-y-3 max-h-96 overflow-y-auto">
-                {readingLogs.map(log => (
-                  <div key={log.id} className="flex items-center gap-3 bg-lemon/30 p-3 rounded-xl border-2 border-lemon">
-                    {log.cover_id ? (
-                      <img
-                        src={`https://covers.openlibrary.org/b/id/${log.cover_id}-S.jpg`}
-                        alt={log.title}
-                        className="w-12 h-16 rounded shadow"
-                      />
-                    ) : (
-                      <div className="w-12 h-16 bg-coolgray rounded flex items-center justify-center text-white font-bold text-xl">
-                        ?
-                      </div>
-                    )}
-                    <div className="flex-1">
-                      <div className="font-bold text-charcoal">{log.title}</div>
-                      {log.author && <div className="text-sm text-coolgray">{log.author}</div>}
-                      <div className="text-xs text-coolgray">{formatDate(log.date)}</div>
-                    </div>
-                    <span className={`px-2 py-1 rounded text-xs font-bold ${
-                      log.status === 'completed' 
-                        ? 'bg-leaf text-white' 
-                        : 'bg-sky text-charcoal'
-                    }`}>
-                      {log.status === 'completed' ? 'Completed' : 'Started'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center text-charcoal">
-                <p>No reading logs yet.</p>
-                <p className="text-sm">Search for books or add them manually to get started!</p>
-              </div>
-            )}
-          </div>
+          <ReadingLog />
         </div>
 
         {/* Log Book Modal */}

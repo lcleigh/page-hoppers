@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import BookSearch from '@/components/BookSearch';
 import ReadingLog from '@/components/ReadingLog';
+import BookSummary from '@/components/BookSummary';
 
 interface BookResult {
   key: string;
@@ -55,6 +56,8 @@ export default function ChildDashboard() {
     setShowLogModal(true);
   };
 
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+
   const handleLogSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedBook) return;
@@ -66,7 +69,7 @@ export default function ChildDashboard() {
     }
 
     try {
-      const res = await fetch('http://localhost:8080/api/reading-logs', {
+      const res = await fetch(`${apiUrl}/reading-logs`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${childToken}`,
@@ -119,7 +122,7 @@ export default function ChildDashboard() {
     }
 
     try {
-      const res = await fetch('http://localhost:8080/api/reading-logs', {
+      const res = await fetch(`${apiUrl}/reading-logs`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${childToken}`,
@@ -172,6 +175,10 @@ export default function ChildDashboard() {
       <div className="w-full max-w-4xl bg-lavender rounded-2xl shadow-lg p-8 flex flex-col items-center">
         <h1 className="text-4xl font-extrabold mb-4 text-bubblegum drop-shadow">Welcome, {childName}!</h1>
         <p className="mb-6 text-lg text-charcoal">This is your reading dashboard.</p>
+
+        <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <BookSummary />
+        </div>
         
         <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Book Search Section */}

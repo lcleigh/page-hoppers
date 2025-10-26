@@ -27,10 +27,11 @@ export default function ReadingSummaryCard() {
     const fetchSummary = async () => {
       const childToken = localStorage.getItem('childToken');
       if (!childToken) return;
-  
+      
+      const childId = localStorage.getItem('childId');
       setLoading(true);
       try {
-        const res = await fetch(`${apiUrl}/reading-logs/summary`, {
+        const res = await fetch(`${apiUrl}/children/${childId}/summary`, {
           headers: {
             'Authorization': `Bearer ${childToken}`,
             'Content-Type': 'application/json',

@@ -1,82 +1,83 @@
 package handlers
 
 import (
-	"encoding/json"
 	"net/http"
 	"strconv"
 	"time"
-	"page-hoppers-backend/internal/models"
+
+	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+
+	"page-hoppers-backend/internal/models"
 )
 
 type ReadingLogHandler struct {
-	db *gorm.DB
+	DB *gorm.DB
 }
 
 func NewReadingLogHandler(db *gorm.DB) *ReadingLogHandler {
 	return &ReadingLogHandler{
-		db: db,
+		DB: db,
 	}
 }
 
+// ---------------------------
+// Request/Response structs
 type CreateReadingLogRequest struct {
-	Title           string `json:"title"`
-	Author          string `json:"author,omitempty"`
-	Status          string `json:"status"` // "started" or "completed"
-	Date            string `json:"date"`   // ISO date string
-	OpenLibraryKey  string `json:"open_library_key,omitempty"`
-	CoverID         *int   `json:"cover_id,omitempty"`
+	Title          string `json:"title"`
+	Author         string `json:"author,omitempty"`
+	Status         string `json:"status"` // "started" or "completed"
+	Date           string `json:"date"`   // ISO date string
+	OpenLibraryKey string `json:"open_library_key,omitempty"`
+	CoverID        *int   `json:"cover_id,omitempty"`
 }
 
 type ReadingLogResponse struct {
-	ID              uint      `json:"id"`
-	Title           string    `json:"title"`
-	Author          string    `json:"author,omitempty"`
-	Status          string    `json:"status"`
-	Date            time.Time `json:"date"`
-	OpenLibraryKey  string    `json:"open_library_key,omitempty"`
-	CoverID         *int      `json:"cover_id,omitempty"`
-	CreatedAt       time.Time `json:"created_at"`
+	ID             uint      `json:"id"`
+	Title          string    `json:"title"`
+	Author         string    `json:"author,omitempty"`
+	Status         string    `json:"status"`
+	Date           time.Time `json:"date"`
+	OpenLibraryKey string    `json:"open_library_key,omitempty"`
+	CoverID        *int      `json:"cover_id,omitempty"`
+	CreatedAt      time.Time `json:"created_at"`
 }
 
-// CreateReadingLog creates a new reading log entry for a child
-func (h *ReadingLogHandler) CreateReadingLog(w http.ResponseWriter, r *http.Request) {
-	// Extract child ID from JWT token
-	childID, ok := r.Context().Value("user_id").(uint)
-	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+// ---------------------------
+// Create a reading log (child)
+func (h *ReadingLogHandler) CreateReadingLog(c *gin.Context) {
+	childIDValue, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
+	childID := childIDValue.(uint)
 
 	var req CreateReadingLogRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request", http.StatusBadRequest)
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return
 	}
 
-	// Validate required fields
 	if req.Title == "" || req.Status == "" || req.Date == "" {
-		http.Error(w, "Title, status, and date username", http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Title, status, and date are required"})
 		return
 	}
 
-	// Validate status
 	if req.Status != "started" && req.Status != "completed" {
-		http.Error(w, "Status must be 'started' or 'completed'", http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Status must be 'started' or 'completed'"})
 		return
 	}
 
-	// Parse date
 	date, err := time.Parse("2006-01-02", req.Date)
 	if err != nil {
-		http.Error(w, "Invalid date format. Use YYYY-MM-DD", http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid date format. Use YYYY-MM-DD"})
 		return
 	}
 
-	// Verify child exists
 	var child models.User
-	if err := h.db.Where("id = ? AND role = ?", childID, "child").First(&child).Error; err != nil {
-		http.Error(w, "Child not found", http.StatusNotFound)
+	if err := h.DB.Where("id = ? AND role = ?", childID, "child").First(&child).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Child not found"})
 		return
 	}
 
@@ -90,12 +91,12 @@ func (h *ReadingLogHandler) CreateReadingLog(w http.ResponseWriter, r *http.Requ
 		CoverID:        req.CoverID,
 	}
 
-	if err := h.db.Create(&readingLog).Error; err != nil {
-		http.Error(w, "Failed to create reading log", http.StatusInternalServerError)
+	if err := h.DB.Create(&readingLog).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create reading log"})
 		return
 	}
 
-	response := ReadingLogResponse{
+	c.JSON(http.StatusOK, ReadingLogResponse{
 		ID:             readingLog.ID,
 		Title:          readingLog.Title,
 		Author:         readingLog.Author,
@@ -104,37 +105,34 @@ func (h *ReadingLogHandler) CreateReadingLog(w http.ResponseWriter, r *http.Requ
 		OpenLibraryKey: readingLog.OpenLibraryKey,
 		CoverID:        readingLog.CoverID,
 		CreatedAt:      readingLog.CreatedAt,
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	})
 }
 
-// GetReadingLogs fetches all reading logs for a child
-func (h *ReadingLogHandler) GetReadingLogs(w http.ResponseWriter, r *http.Request) {
-	// Extract child ID from JWT token
-	childID, ok := r.Context().Value("user_id").(uint)
-	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+// ---------------------------
+// Get all reading logs for a child
+func (h *ReadingLogHandler) GetReadingLogs(c *gin.Context) {
+	childIDValue, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
+	childID := childIDValue.(uint)
 
-	// Verify child exists
 	var child models.User
-	if err := h.db.Where("id = ? AND role = ?", childID, "child").First(&child).Error; err != nil {
-		http.Error(w, "Child not found", http.StatusNotFound)
+	if err := h.DB.Where("id = ? AND role = ?", childID, "child").First(&child).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Child not found"})
 		return
 	}
 
-	var readingLogs []models.ReadingLog
-	if err := h.db.Where("child_id = ?", childID).Order("date DESC, created_at DESC").Find(&readingLogs).Error; err != nil {
-		http.Error(w, "Failed to fetch reading logs", http.StatusInternalServerError)
+	var logs []models.ReadingLog
+	if err := h.DB.Where("child_id = ?", childID).Order("date DESC, created_at DESC").Find(&logs).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch reading logs"})
 		return
 	}
 
 	var responses []ReadingLogResponse
-	for _, log := range readingLogs {
-		response := ReadingLogResponse{
+	for _, log := range logs {
+		responses = append(responses, ReadingLogResponse{
 			ID:             log.ID,
 			Title:          log.Title,
 			Author:         log.Author,
@@ -143,52 +141,50 @@ func (h *ReadingLogHandler) GetReadingLogs(w http.ResponseWriter, r *http.Reques
 			OpenLibraryKey: log.OpenLibraryKey,
 			CoverID:        log.CoverID,
 			CreatedAt:      log.CreatedAt,
-		}
-		responses = append(responses, response)
+		})
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(responses)
+	c.JSON(http.StatusOK, responses)
 }
 
-// GetChildReadingLogs fetches reading logs for a specific child (parent access)
-func (h *ReadingLogHandler) GetChildReadingLogs(w http.ResponseWriter, r *http.Request) {
-	// Extract parent ID from JWT token
-	parentID, ok := r.Context().Value("user_id").(uint)
-	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+// ---------------------------
+// Get reading logs for a specific child (parent access)
+func (h *ReadingLogHandler) GetChildReadingLogs(c *gin.Context) {
+	parentIDValue, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
 		return
 	}
+	parentID := parentIDValue.(uint)
 
-	// Get child ID from query parameter
-	childIDStr := r.URL.Query().Get("child_id")
+	childIDStr := c.Query("child_id")
 	if childIDStr == "" {
-		http.Error(w, "Child ID is required", http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Child ID is required"})
 		return
 	}
 
-	childID, err := strconv.ParseUint(childIDStr, 10, 32)
+	childIDUint, err := strconv.ParseUint(childIDStr, 10, 32)
 	if err != nil {
-		http.Error(w, "Invalid child ID", http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid child ID"})
 		return
 	}
+	childID := uint(childIDUint)
 
-	// Verify the child belongs to the parent
 	var child models.User
-	if err := h.db.Where("id = ? AND parent_id = ? AND role = ?", childID, parentID, "child").First(&child).Error; err != nil {
-		http.Error(w, "Child not found or unauthorized", http.StatusNotFound)
+	if err := h.DB.Where("id = ? AND parent_id = ? AND role = ?", childID, parentID, "child").First(&child).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Child not found or unauthorized"})
 		return
 	}
 
-	var readingLogs []models.ReadingLog
-	if err := h.db.Where("child_id = ?", childID).Order("date DESC, created_at DESC").Find(&readingLogs).Error; err != nil {
-		http.Error(w, "Failed to fetch reading logs", http.StatusInternalServerError)
+	var logs []models.ReadingLog
+	if err := h.DB.Where("child_id = ?", childID).Order("date DESC, created_at DESC").Find(&logs).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch reading logs"})
 		return
 	}
 
 	var responses []ReadingLogResponse
-	for _, log := range readingLogs {
-		response := ReadingLogResponse{
+	for _, log := range logs {
+		responses = append(responses, ReadingLogResponse{
 			ID:             log.ID,
 			Title:          log.Title,
 			Author:         log.Author,
@@ -197,10 +193,8 @@ func (h *ReadingLogHandler) GetChildReadingLogs(w http.ResponseWriter, r *http.R
 			OpenLibraryKey: log.OpenLibraryKey,
 			CoverID:        log.CoverID,
 			CreatedAt:      log.CreatedAt,
-		}
-		responses = append(responses, response)
+		})
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(responses)
-} 
+	c.JSON(http.StatusOK, responses)
+}

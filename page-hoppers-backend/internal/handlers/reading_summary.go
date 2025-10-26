@@ -4,8 +4,9 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/gin-gonic/gin"
 	"page-hoppers-backend/internal/models"
+
+	"github.com/gin-gonic/gin"
 )
 
 // Add this method to your ReadingLogHandler
@@ -45,13 +46,34 @@ func (h *ReadingLogHandler) GetReadingSummary(c *gin.Context) {
 
 	var currentBookData gin.H
 	if currentBook != nil {
-	    currentBookData = gin.H{
-	        "title": currentBook.Title,
-	        "author": currentBook.Author,
-	        "cover_id": currentBook.CoverID,
-	    }
+		currentBookData = gin.H{
+			"title":    currentBook.Title,
+			"author":   currentBook.Author,
+			"cover_id": currentBook.CoverID,
+		}
 	} else {
-	    currentBookData = nil
+		currentBookData = nil
+	}
+
+	// Last Completed Book
+	var lastCompletedBook *models.ReadingLog
+	for _, log := range logs {
+		if log.Status == "completed" {
+			if lastCompletedBook == nil || log.Date.After(lastCompletedBook.Date) {
+				lastCompletedBook = &log
+			}
+		}
+	}
+
+	var lastCompletedBookData gin.H
+	if lastCompletedBook != nil {
+		lastCompletedBookData = gin.H{
+			"title":    lastCompletedBook.Title,
+			"author":   lastCompletedBook.Author,
+			"cover_id": lastCompletedBook.CoverID,
+		}
+	} else {
+		lastCompletedBookData = nil
 	}
 
 	// Compute summary
@@ -67,11 +89,12 @@ func (h *ReadingLogHandler) GetReadingSummary(c *gin.Context) {
 
 	// Return JSON summary
 	c.JSON(http.StatusOK, gin.H{
-		"child_id":  childID,
-		"name":      child.Name,
-		"currentBook": currentBookData,
-		"started":   started,
-		"completed": completed,
-		"total":     len(logs),
+		"child_id":          childID,
+		"name":              child.Name,
+		"currentBook":       currentBookData,
+		"lastCompletedBook": lastCompletedBookData,
+		"started":           started,
+		"completed":         completed,
+		"total":             len(logs),
 	})
 }

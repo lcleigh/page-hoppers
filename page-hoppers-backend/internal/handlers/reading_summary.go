@@ -48,6 +48,7 @@ func (h *ReadingLogHandler) GetReadingSummary(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"child_id":  childID,
 		"name":      child.Name,
+		"currentBook": gin.H{"title": "TEST BOOK"},
 		"started":   started,
 		"completed": completed,
 		"total":     len(logs),

@@ -7,12 +7,14 @@ import (
 )
 
 type ReadingSummary struct {
-	CurrentBook    *models.ReadingLog `json:"currentBook,omitempty"`
-	LastCompletedBook       *models.ReadingLog `json:"lastCompletedBook,omitempty"`
-	TotalUncompletedBooks	int					`json:"totalUncompletedBooks"`
-	BooksCompletedThisMonth int                `json:"booksCompletedThisMonth"`
-	BooksCompletedThisYear  int                `json:"booksCompletedThisYear"`
-	TotalCompletedBooks     int                `json:"totalCompletedBooks"`
+	ChildID					uint					`json:"child_id"`
+	Name					string					`json:"name"`
+	CurrentBook    			*models.ReadingLog 		`json:"currentBook,omitempty"`
+	LastCompletedBook       *models.ReadingLog 		`json:"lastCompletedBook,omitempty"`
+	TotalUncompletedBooks	int						`json:"totalUncompletedBooks"`
+	BooksCompletedThisMonth int               		 `json:"booksCompletedThisMonth"`
+	BooksCompletedThisYear  int               		 `json:"booksCompletedThisYear"`
+	TotalCompletedBooks     int               		 `json:"totalCompletedBooks"`
 }
 
 // db *gorm.DB → a pointer to the GORM database connection.

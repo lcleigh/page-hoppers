@@ -76,6 +76,9 @@ func (h *ReadingLogHandler) GetReadingSummary(c *gin.Context) {
 		lastCompletedBookData = nil
 	}
 
+	// Compute Total Books Read This Month
+	// var totalBooksThisMonth gin.H
+
 	// Compute summary
 	started := 0
 	completed := 0
@@ -89,12 +92,13 @@ func (h *ReadingLogHandler) GetReadingSummary(c *gin.Context) {
 
 	// Return JSON summary
 	c.JSON(http.StatusOK, gin.H{
-		"child_id":          childID,
-		"name":              child.Name,
-		"currentBook":       currentBookData,
-		"lastCompletedBook": lastCompletedBookData,
-		"started":           started,
-		"completed":         completed,
-		"total":             len(logs),
+		"child_id":            childID,
+		"name":                child.Name,
+		"currentBook":         currentBookData,
+		"lastCompletedBook":   lastCompletedBookData,
+		"started":             started,
+		"completed":           completed,
+		"totalBooksThisMonth": 12,
+		"total":               len(logs),
 	})
 }

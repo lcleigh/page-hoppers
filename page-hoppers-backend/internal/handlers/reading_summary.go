@@ -33,6 +33,27 @@ func (h *ReadingLogHandler) GetReadingSummary(c *gin.Context) {
 		return
 	}
 
+	// Current Book
+	var currentBook *models.ReadingLog
+	for _, log := range logs {
+		if log.Status == "started" {
+			if currentBook == nil || log.Date.After(currentBook.Date) {
+				currentBook = &log
+			}
+		}
+	}
+
+	var currentBookData gin.H
+	if currentBook != nil {
+	    currentBookData = gin.H{
+	        "title": currentBook.Title,
+	        "author": currentBook.Author,
+	        "cover_id": currentBook.CoverID,
+	    }
+	} else {
+	    currentBookData = nil
+	}
+
 	// Compute summary
 	started := 0
 	completed := 0
@@ -48,7 +69,7 @@ func (h *ReadingLogHandler) GetReadingSummary(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"child_id":  childID,
 		"name":      child.Name,
-		"currentBook": gin.H{"title": "TEST BOOK"},
+		"currentBook": currentBookData,
 		"started":   started,
 		"completed": completed,
 		"total":     len(logs),

@@ -1,20 +1,21 @@
 package repository
 
 import (
-	"time"
-	"gorm.io/gorm"
 	"page-hoppers-backend/internal/models"
+	"time"
+
+	"gorm.io/gorm"
 )
 
 type ReadingSummary struct {
-	ChildID					uint					`json:"child_id"`
-	Name					string					`json:"name"`
-	CurrentBook    			*models.ReadingLog 		`json:"currentBook,omitempty"`
-	LastCompletedBook       *models.ReadingLog 		`json:"lastCompletedBook,omitempty"`
-	TotalUncompletedBooks	int						`json:"totalUncompletedBooks"`
-	BooksCompletedThisMonth int               		 `json:"booksCompletedThisMonth"`
-	BooksCompletedThisYear  int               		 `json:"booksCompletedThisYear"`
-	TotalCompletedBooks     int               		 `json:"totalCompletedBooks"`
+	ChildID                 uint               `json:"child_id"`
+	Name                    string             `json:"name"`
+	CurrentBook             *models.ReadingLog `json:"currentBook,omitempty"`
+	LastCompletedBook       *models.ReadingLog `json:"lastCompletedBook,omitempty"`
+	TotalUncompletedBooks   int                `json:"totalUncompletedBooks"`
+	TotalBooksReadThisMonth int                `json:"totalBooksReadThisMonth"`
+	TotalBooksReadThisYear  int                `json:"totalBooksReadThisYear"`
+	TotalCompletedBooks     int                `json:"totalCompletedBooks"`
 }
 
 // db *gorm.DB → a pointer to the GORM database connection.
@@ -43,10 +44,10 @@ func GetReadingSummary(db *gorm.DB, childID uint) (*ReadingSummary, error) {
 		if log.Status == "completed" {
 			summary.TotalCompletedBooks++
 			if log.Date.Month() == currentMonth && log.Date.Year() == currentYear {
-				summary.BooksCompletedThisMonth++
+				summary.TotalBooksReadThisMonth++
 			}
 			if log.Date.Year() == currentYear {
-				summary.BooksCompletedThisYear++
+				summary.TotalBooksReadThisYear++
 			}
 		}
 	}

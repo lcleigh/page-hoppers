@@ -3,6 +3,7 @@ package handlers
 import (
 	"net/http"
 	"strconv"
+	"time"
 
 	"page-hoppers-backend/internal/models"
 
@@ -76,8 +77,27 @@ func (h *ReadingLogHandler) GetReadingSummary(c *gin.Context) {
 		lastCompletedBookData = nil
 	}
 
-	// Compute Total Books Read This Month
-	// var totalBooksThisMonth gin.H
+	now := time.Now()
+	currentYear := now.Year()
+	currentMonth := now.Month()
+
+	totalBooksReadThisMonth := 0
+	for _, log := range logs {
+		if log.Status == "completed" &&
+			log.Date.Year() == currentYear &&
+			log.Date.Month() == currentMonth {
+			totalBooksReadThisMonth++
+		}
+	}
+
+	totalBooksReadThisYear := 0
+	for _, log := range logs {
+		if log.Status == "completed" &&
+			log.Date.Year() == currentYear {
+			totalBooksReadThisYear++
+		}
+
+	}
 
 	// Compute summary
 	started := 0
@@ -92,13 +112,13 @@ func (h *ReadingLogHandler) GetReadingSummary(c *gin.Context) {
 
 	// Return JSON summary
 	c.JSON(http.StatusOK, gin.H{
-		"child_id":            childID,
-		"name":                child.Name,
-		"currentBook":         currentBookData,
-		"lastCompletedBook":   lastCompletedBookData,
-		"started":             started,
-		"completed":           completed,
-		"totalBooksThisMonth": 12,
-		"total":               len(logs),
+		"child_id":                childID,
+		"name":                    child.Name,
+		"currentBook":             currentBookData,
+		"lastCompletedBook":       lastCompletedBookData,
+		"totalBooksReadThisMonth": totalBooksReadThisMonth,
+		"totalBooksReadThisYear":  totalBooksReadThisMonth,
+		"totalBooksUnfinished":    started,
+		"totalBooksRead":          completed,
 	})
 }

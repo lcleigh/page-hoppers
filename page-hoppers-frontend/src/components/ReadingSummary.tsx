@@ -12,10 +12,10 @@ interface ReadingSummary {
     author?: string;
     cover_id?: number;
   };
-  booksCompletedThisMonth: number;
-  booksCompletedThisYear: number;
+  totalBooksReadThisMonth: number;
+  totalBooksReadThisYear: number;
   totalUncompletedBooks: number;
-  totalCompletedBooks: number;
+  totalComplatedBooks: number;
 }
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL;
@@ -39,6 +39,8 @@ export default function ReadingSummaryCard() {
         });
         if (res.ok) {
           const data = await res.json();
+          console.log("API summary response:", data); // ✅ log the full response
+          console.log("Current book:", data.currentBook); // ✅ log currentBook specifically
           setSummary(data);
         }
       } catch (err) {
@@ -92,11 +94,11 @@ export default function ReadingSummaryCard() {
           </div>
           <div className="grid grid-cols-2 gap-4 mt-2">
             <div className="bg-lemon/30 p-3 rounded-xl border-2 border-lemon text-center">
-              <div className="font-bold text-charcoal text-lg">{summary.booksCompletedThisMonth}</div>
+              <div className="font-bold text-charcoal text-lg">{summary.totalBooksReadThisMonth}</div>
               <div className="text-sm text-coolgray">Books Read This Month</div>
             </div>
             <div className="bg-lemon/30 p-3 rounded-xl border-2 border-lemon text-center">
-              <div className="font-bold text-charcoal text-lg">{summary.booksCompletedThisYear}</div>
+              <div className="font-bold text-charcoal text-lg">{summary.totalBooksReadThisYear}</div>
               <div className="text-sm text-coolgray">Books Read This Year</div>
             </div>
             <div className="bg-lemon/30 p-3 rounded-xl border-2 border-lemon text-center col-span-2">
@@ -104,7 +106,7 @@ export default function ReadingSummaryCard() {
               <div className="text-sm text-coolgray">Total Books Unfinished</div>
             </div>
             <div className="bg-lemon/30 p-3 rounded-xl border-2 border-lemon text-center col-span-2">
-              <div className="font-bold text-charcoal text-lg">{summary.totalCompletedBooks}</div>
+              <div className="font-bold text-charcoal text-lg">{summary.totalComplatedBooks}</div>
               <div className="text-sm text-coolgray">Total Books Read</div>
             </div>
           </div>

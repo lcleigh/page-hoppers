@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import BookSearch from '@/components/BookSearch';
 import ReadingLog from '@/components/ReadingLog';
-import BookSummary from '@/components/BookSummary';
+import ReadingSummary from '@/components/ReadingSummary';
 
 interface BookResult {
   key: string;
@@ -177,7 +177,7 @@ export default function ChildDashboard() {
         <p className="mb-6 text-lg text-charcoal">This is your reading dashboard.</p>
 
         <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <BookSummary />
+          <ReadingSummary />
         </div>
         
         <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-8">

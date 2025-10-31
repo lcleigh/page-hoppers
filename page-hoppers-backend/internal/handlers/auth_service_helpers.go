@@ -1,28 +1,30 @@
 package handlers
 
 import (
-	"encoding/json"
 	"net/http"
 	"time"
-	
+
+	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/lcleigh/page-hoppers-backend/internal/models"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
+
+	"page-hoppers-backend/internal/models"
 )
 
 type AuthHandler struct {
-	db     *gorm.DB
-	secret []byte
+	DB     *gorm.DB
+	Secret []byte
 }
 
 func NewAuthHandler(db *gorm.DB, secret []byte) *AuthHandler {
 	return &AuthHandler{
-		db:     db,
-		secret: secret,
+		DB:     db,
+		Secret: secret,
 	}
 }
 
+// Request/Response structs
 type ParentLoginRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
@@ -37,88 +39,6 @@ type LoginResponse struct {
 	Token string `json:"token"`
 }
 
-func (h *AuthHandler) ParentLogin(w http.ResponseWriter, r *http.Request) {
-	var req ParentLoginRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request", http.StatusBadRequest)
-		return
-	}
-
-	var user models.User
-	if err := h.db.Where("email = ? AND role = ?", req.Email, "parent").First(&user).Error; err != nil {
-		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
-		return
-	}
-
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
-		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
-		return
-	}
-
-	// Create token
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"user_id": user.ID,
-		"role":    "parent",
-		"exp":     time.Now().Add(time.Hour * 24).Unix(),
-	})
-
-	tokenString, err := token.SignedString(h.secret)
-	if err != nil {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	json.NewEncoder(w).Encode(LoginResponse{Token: tokenString})
-}
-
-func (h *AuthHandler) ChildLogin(w http.ResponseWriter, r *http.Request) {
-	var req ChildLoginRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request", http.StatusBadRequest)
-		return
-	}
-
-	var child models.User
-	if err := h.db.Where("id = ? AND role = ?", req.ChildID, "child").First(&child).Error; err != nil {
-		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
-		return
-	}
-
-	if err := bcrypt.CompareHashAndPassword([]byte(child.PIN), []byte(req.PIN)); err != nil {
-		http.Error(w, "Invalid PIN", http.StatusUnauthorized)
-		return
-	}
-
-	// Create token
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"user_id":   child.ID,
-		"parent_id": child.ParentID,
-		"role":      "child",
-		"exp":       time.Now().Add(time.Hour * 12).Unix(), // Shorter expiration for child tokens
-	})
-
-	tokenString, err := token.SignedString(h.secret)
-	if err != nil {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	json.NewEncoder(w).Encode(LoginResponse{Token: tokenString})
-}
-
-func (h *AuthHandler) GetChildren(w http.ResponseWriter, r *http.Request) {
-	// Extract parent ID from JWT token
-	parentID := r.Context().Value("user_id").(uint)
-
-	var children []models.User
-	if err := h.db.Where("parent_id = ? AND role = ?", parentID, "child").Find(&children).Error; err != nil {
-		http.Error(w, "Failed to fetch children", http.StatusInternalServerError)
-		return
-	}
-
-	json.NewEncoder(w).Encode(children)
-}
-
 type CreateChildRequest struct {
 	Name string `json:"name"`
 	Age  int    `json:"age"`
@@ -130,27 +50,126 @@ type ChildResponse struct {
 	Name string `json:"name"`
 }
 
-func (h *AuthHandler) CreateChild(w http.ResponseWriter, r *http.Request) {
-	parentID, ok := r.Context().Value("user_id").(uint)
-	if !ok {
-		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+type ParentRegisterRequest struct {
+	Name     string `json:"name"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+// ---------------------------
+// Parent login
+func (h *AuthHandler) ParentLogin(c *gin.Context) {
+	var req ParentLoginRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return
 	}
+
+	var parent models.User
+	if err := h.DB.Where("email = ? AND role = ?", req.Email, "parent").First(&parent).Error; err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+		return
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(parent.Password), []byte(req.Password)); err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+		return
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"user_id": parent.ID,
+		"role":    "parent",
+		"exp":     time.Now().Add(24 * time.Hour).Unix(),
+	})
+
+	tokenString, err := token.SignedString(h.Secret)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not generate token"})
+		return
+	}
+
+	c.JSON(http.StatusOK, LoginResponse{Token: tokenString})
+}
+
+// ---------------------------
+// Child login
+func (h *AuthHandler) ChildLogin(c *gin.Context) {
+	var req ChildLoginRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
+		return
+	}
+
+	var child models.User
+	if err := h.DB.Where("id = ? AND role = ?", req.ChildID, "child").First(&child).Error; err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
+		return
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(child.PIN), []byte(req.PIN)); err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid PIN"})
+		return
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"user_id":   child.ID,
+		"parent_id": child.ParentID,
+		"role":      "child",
+		"exp":       time.Now().Add(12 * time.Hour).Unix(),
+	})
+
+	tokenString, err := token.SignedString(h.Secret)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not generate token"})
+		return
+	}
+
+	c.JSON(http.StatusOK, LoginResponse{Token: tokenString})
+}
+
+// ---------------------------
+// Get children for a parent
+func (h *AuthHandler) GetChildren(c *gin.Context) {
+	parentIDValue, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+	parentID := parentIDValue.(uint)
+
+	var children []models.User
+	if err := h.DB.Where("parent_id = ? AND role = ?", parentID, "child").Find(&children).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not fetch children"})
+		return
+	}
+
+	c.JSON(http.StatusOK, children)
+}
+
+// ---------------------------
+// Create a child
+func (h *AuthHandler) CreateChild(c *gin.Context) {
+	parentIDValue, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
+	parentID := parentIDValue.(uint)
 
 	var req CreateChildRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request", http.StatusBadRequest)
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return
 	}
 
-	if req.PIN == "" || req.Name == "" || req.Age <= 0 {
-		http.Error(w, "Name, Age, and PIN username", http.StatusBadRequest)
+	if req.Name == "" || req.Age <= 0 || req.PIN == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Name, Age, and PIN are required"})
 		return
 	}
 
 	hashedPIN, err := bcrypt.GenerateFromPassword([]byte(req.PIN), bcrypt.DefaultCost)
 	if err != nil {
-		http.Error(w, "Failed to hash PIN", http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not hash PIN"})
 		return
 	}
 
@@ -162,47 +181,40 @@ func (h *AuthHandler) CreateChild(w http.ResponseWriter, r *http.Request) {
 		ParentID: &parentID,
 	}
 
-	if err := h.db.Create(&child).Error; err != nil {
-		http.Error(w, "Failed to create child", http.StatusInternalServerError)
+	if err := h.DB.Create(&child).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create child"})
 		return
 	}
 
-	json.NewEncoder(w).Encode(ChildResponse{ID: child.ID, Name: child.Name})
+	c.JSON(http.StatusOK, ChildResponse{ID: child.ID, Name: child.Name})
 }
 
-type ParentRegisterRequest struct {
-	Name     string `json:"name"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
-}
-
-func (h *AuthHandler) ParentRegister(w http.ResponseWriter, r *http.Request) {
+// ---------------------------
+// Parent registration
+func (h *AuthHandler) ParentRegister(c *gin.Context) {
 	var req ParentRegisterRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request", http.StatusBadRequest)
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request"})
 		return
 	}
 
 	if req.Name == "" || req.Email == "" || req.Password == "" {
-		http.Error(w, "Name, email, and password are required", http.StatusBadRequest)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Name, email, and password are required"})
 		return
 	}
 
-	// Check if email already exists
-	var existingUser models.User
-	if err := h.db.Where("email = ?", req.Email).First(&existingUser).Error; err == nil {
-		http.Error(w, "Email already registered", http.StatusConflict)
+	var existing models.User
+	if err := h.DB.Where("email = ?", req.Email).First(&existing).Error; err == nil {
+		c.JSON(http.StatusConflict, gin.H{"error": "Email already registered"})
 		return
 	}
 
-	// Hash password
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
-		http.Error(w, "Failed to hash password", http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not hash password"})
 		return
 	}
 
-	// Create parent user
 	parent := models.User{
 		Name:     req.Name,
 		Email:    req.Email,
@@ -210,11 +222,10 @@ func (h *AuthHandler) ParentRegister(w http.ResponseWriter, r *http.Request) {
 		Role:     "parent",
 	}
 
-	if err := h.db.Create(&parent).Error; err != nil {
-		http.Error(w, "Failed to create user", http.StatusInternalServerError)
+	if err := h.DB.Create(&parent).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Could not create parent"})
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]string{"message": "Parent registered successfully"})
-} 
+	c.JSON(http.StatusCreated, gin.H{"message": "Parent registered successfully"})
+}

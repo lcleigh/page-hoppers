@@ -47,7 +47,7 @@ export default function ParentDashboard() {
         return;
       }
       try {
-        const res = await fetch(`${API_URL}/api/children`, {
+        const res = await fetch(`${API_URL}/children`, {
           headers: {
             Authorization: `Bearer ${parentToken}`,
           },

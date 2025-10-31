@@ -8,7 +8,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"github.com/lcleigh/page-hoppers-backend/models"
+	"page-hoppers-backend/internal/models"
 )
 
 func main() {
@@ -33,7 +33,7 @@ func main() {
 	}
 
 	parent := models.User{
-		Username: "testparent",
+		Name:     "testparent",
 		Email:    "parent@example.com",
 		Password: string(hashed),
 		Role:     "parent",

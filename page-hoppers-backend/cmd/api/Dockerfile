@@ -1,10 +1,16 @@
-# Build stage
-FROM golang:1.23-alpine AS builder
+# Use Go image directly (no multi-stage build)
+FROM golang:1.25-alpine
+
+# Install git (needed for go modules)
+RUN apk add --no-cache git
+
+# Install Air for live reloading
+RUN go install github.com/air-verse/air@latest
 
 # Set working directory
 WORKDIR /app
 
-# Copy go.mod and go.sum first for caching dependencies
+# Copy go.mod and go.sum first (for caching deps)
 COPY ../../go.mod ../../go.sum ./
 
 # Download dependencies
@@ -13,22 +19,8 @@ RUN go mod download
 # Copy the entire backend source code
 COPY ../../ ./
 
-# Build the Go app (tell it where main.go is)
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main ./cmd/api
-
-# Final stage
-FROM alpine:latest
-
-# Install ca-certificates for HTTPS requests
-RUN apk --no-cache add ca-certificates
-
-# Set working directory
-WORKDIR /root/
-
-COPY --from=builder /app/main .
-
 # Expose port
 EXPOSE 8080
 
-# Run the application
-CMD ["./main"] 
+# Run the app using Air for live reload
+CMD ["air", "-c", ".air.toml"]

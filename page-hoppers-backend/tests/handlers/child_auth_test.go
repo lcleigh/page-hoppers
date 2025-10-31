@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/lcleigh/page-hoppers-backend/handlers"
+	"page-hoppers-backend/internal/handlers"
 )
 
 // TestChildLoginSuccess tests successful child login
@@ -18,7 +18,7 @@ func TestChildLoginSuccess(t *testing.T) {
 
 	// Create a parent and a child
 	parent := createTestParent(db, "Test Parent", "parent@example.com", "parentpass")
-	child := createTestChild(db, "childuser", "Child Name", 8, parent.ID, "1234")
+	child := createTestChild(db, "Child Name", 8, parent.ID, "1234")
 
 	// Prepare login payload
 	payload := handlers.ChildLoginRequest{
@@ -66,7 +66,7 @@ func TestChildLoginInvalidPIN(t *testing.T) {
 
 	// Create a parent and a child
 	parent := createTestParent(db, "Test Parent", "parent@example.com", "parentpass")
-	child := createTestChild(db, "childuser", "Child Name", 8, parent.ID, "1234")
+	child := createTestChild(db, "Child Name", 8, parent.ID, "1234")
 
 	// Prepare login payload with wrong PIN
 	payload := handlers.ChildLoginRequest{
@@ -198,7 +198,7 @@ func TestChildLoginEmptyPIN(t *testing.T) {
 
 	// Create a parent and a child
 	parent := createTestParent(db, "Test Parent", "parent@example.com", "parentpass")
-	child := createTestChild(db, "childuser", "Child Name", 8, parent.ID, "1234")
+	child := createTestChild(db, "Child Name", 8, parent.ID, "1234")
 
 	// Prepare login payload with empty PIN
 	payload := handlers.ChildLoginRequest{
@@ -245,8 +245,8 @@ func TestChildLoginMultipleChildren(t *testing.T) {
 
 	// Create a parent and multiple children
 	parent := createTestParent(db, "Test Parent", "parent@example.com", "parentpass")
-	child1 := createTestChild(db, "child1", "Child One", 8, parent.ID, "1111")
-	child2 := createTestChild(db, "child2", "Child Two", 10, parent.ID, "2222")
+	child1 := createTestChild(db, "Child One", 8, parent.ID, "1111")
+	child2 := createTestChild(db, "Child Two", 10, parent.ID, "2222")
 
 	// Test login for first child
 	payload1 := handlers.ChildLoginRequest{

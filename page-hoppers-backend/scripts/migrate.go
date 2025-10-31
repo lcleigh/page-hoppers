@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/joho/godotenv"
-	"github.com/lcleigh/page-hoppers-backend/models"
+	"page-hoppers-backend/internal/models"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )

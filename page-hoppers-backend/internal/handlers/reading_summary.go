@@ -1,0 +1,124 @@
+package handlers
+
+import (
+	"net/http"
+	"strconv"
+	"time"
+
+	"page-hoppers-backend/internal/models"
+
+	"github.com/gin-gonic/gin"
+)
+
+// Add this method to your ReadingLogHandler
+func (h *ReadingLogHandler) GetReadingSummary(c *gin.Context) {
+	// Get the child ID from the URL
+	childIDStr := c.Param("id")
+	childIDUint, err := strconv.ParseUint(childIDStr, 10, 32)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid child ID"})
+		return
+	}
+	childID := uint(childIDUint)
+
+	// Make sure the child exists
+	var child models.User
+	if err := h.DB.Where("id = ? AND role = ?", childID, "child").First(&child).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Child not found"})
+		return
+	}
+
+	// Fetch reading logs
+	var logs []models.ReadingLog
+	if err := h.DB.Where("child_id = ?", childID).Find(&logs).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch reading logs"})
+		return
+	}
+
+	// Current Book
+	var currentBook *models.ReadingLog
+	for _, log := range logs {
+		if log.Status == "started" {
+			if currentBook == nil || log.Date.After(currentBook.Date) {
+				currentBook = &log
+			}
+		}
+	}
+
+	var currentBookData gin.H
+	if currentBook != nil {
+		currentBookData = gin.H{
+			"title":    currentBook.Title,
+			"author":   currentBook.Author,
+			"cover_id": currentBook.CoverID,
+		}
+	} else {
+		currentBookData = nil
+	}
+
+	// Last Completed Book
+	var lastCompletedBook *models.ReadingLog
+	for _, log := range logs {
+		if log.Status == "completed" {
+			if lastCompletedBook == nil || log.Date.After(lastCompletedBook.Date) {
+				lastCompletedBook = &log
+			}
+		}
+	}
+
+	var lastCompletedBookData gin.H
+	if lastCompletedBook != nil {
+		lastCompletedBookData = gin.H{
+			"title":    lastCompletedBook.Title,
+			"author":   lastCompletedBook.Author,
+			"cover_id": lastCompletedBook.CoverID,
+		}
+	} else {
+		lastCompletedBookData = nil
+	}
+
+	now := time.Now()
+	currentYear := now.Year()
+	currentMonth := now.Month()
+
+	totalBooksReadThisMonth := 0
+	for _, log := range logs {
+		if log.Status == "completed" &&
+			log.Date.Year() == currentYear &&
+			log.Date.Month() == currentMonth {
+			totalBooksReadThisMonth++
+		}
+	}
+
+	totalBooksReadThisYear := 0
+	for _, log := range logs {
+		if log.Status == "completed" &&
+			log.Date.Year() == currentYear {
+			totalBooksReadThisYear++
+		}
+
+	}
+
+	// Compute summary
+	started := 0
+	completed := 0
+	for _, log := range logs {
+		if log.Status == "started" {
+			started++
+		} else if log.Status == "completed" {
+			completed++
+		}
+	}
+
+	// Return JSON summary
+	c.JSON(http.StatusOK, gin.H{
+		"child_id":                childID,
+		"name":                    child.Name,
+		"currentBook":             currentBookData,
+		"lastCompletedBook":       lastCompletedBookData,
+		"totalBooksReadThisMonth": totalBooksReadThisMonth,
+		"totalBooksReadThisYear":  totalBooksReadThisYear,
+		"totalUncompletedBooks":   started,
+		"totalCompletedBooks":     completed,
+	})
+}

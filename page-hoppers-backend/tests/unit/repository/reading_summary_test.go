@@ -44,11 +44,11 @@ func TestGetReadingSummary_EmptyLogs(t *testing.T) {
 	assert.NotNil(t, summary)
 	// Verify that both CurrentBook and LastBook are nil.
 	assert.Nil(t, summary.CurrentBook)
-	assert.Nil(t, summary.LastBook)
+	assert.Nil(t, summary.LastCompletedBook)
 	// Check that all count fields in the summary are 0.
-	assert.Equal(t, 0, summary.TotalBooks)
-	assert.Equal(t, 0, summary.BooksThisMonth)
-	assert.Equal(t, 0, summary.BooksThisYear)
+	assert.Equal(t, 0, summary.TotalCompletedBooks)
+	assert.Equal(t, 0, summary.TotalBooksReadThisMonth)
+	assert.Equal(t, 0, summary.TotalBooksReadThisYear)
 }
 
 // TEST 2: TestGetReadingSummary_WithData tests with various reading logs

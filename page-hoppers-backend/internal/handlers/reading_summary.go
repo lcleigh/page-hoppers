@@ -117,8 +117,8 @@ func (h *ReadingLogHandler) GetReadingSummary(c *gin.Context) {
 		"currentBook":             currentBookData,
 		"lastCompletedBook":       lastCompletedBookData,
 		"totalBooksReadThisMonth": totalBooksReadThisMonth,
-		"totalBooksReadThisYear":  totalBooksReadThisMonth,
-		"totalBooksUnfinished":    started,
-		"totalBooksRead":          completed,
+		"totalBooksReadThisYear":  totalBooksReadThisYear,
+		"totalUncompletedBooks":   started,
+		"totalCompletedBooks":     completed,
 	})
 }

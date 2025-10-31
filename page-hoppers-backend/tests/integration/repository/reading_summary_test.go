@@ -1,26 +1,21 @@
 package integration_respository_test
 
 import (
-    "encoding/json"
-    "net/http"
-    "net/http/httptest"
-    "testing"
+	"net/http"
+	"testing"
 	"time"
-	"fmt"
 
-    "github.com/gin-gonic/gin"
-    "github.com/stretchr/testify/assert"
-
-    "page-hoppers-backend/internal/handlers"
 	"page-hoppers-backend/internal/models"
 	"page-hoppers-backend/tests"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func ParseReadingSummary(summary map[string]interface{}) (
 	currentBook map[string]interface{},
 	lastCompletedBook map[string]interface{},
-	booksCompletedThisMonth int,
-	booksCompletedThisYear int,
+	totalBooksReadThisMonth int,
+	totalBooksReadThisYear int,
 	totalCompletedBooks int,
 	totalUncompletedBooks int,
 ) {
@@ -32,12 +27,12 @@ func ParseReadingSummary(summary map[string]interface{}) (
 		lastCompletedBook = lcb
 	}
 
-	if bctm, ok := summary["booksCompletedThisMonth"].(float64); ok {
-		booksCompletedThisMonth = int(bctm)
+	if bctm, ok := summary["totalBooksReadThisMonth"].(float64); ok {
+		totalBooksReadThisMonth = int(bctm)
 	}
 
-	if bcty, ok := summary["booksCompletedThisYear"].(float64); ok {
-		booksCompletedThisYear = int(bcty)
+	if bcty, ok := summary["totalBooksReadThisYear"].(float64); ok {
+		totalBooksReadThisYear = int(bcty)
 	}
 
 	if tcb, ok := summary["totalCompletedBooks"].(float64); ok {
@@ -51,90 +46,245 @@ func ParseReadingSummary(summary map[string]interface{}) (
 	return
 }
 
-// TestGetReadingSummaryIntegration tests the full flow from route → handler → database → repository
-func TestGetReadingSummaryIntegration(t *testing.T) {
-    gin.SetMode(gin.TestMode)
-    router := gin.Default()
+// No Books started or complated by the child
+func TestGetReadingSummary_NoBooks(t *testing.T) {
+	setup := tests.SetupSummaryTest()
 
-    db := tests.SetupTestDB()
+	resp := setup.GetSummary()
+	assert.Equal(t, http.StatusOK, resp.Code)
 
-	// Register route
-    router.GET("/children/:id/summary", handlers.GetReadingSummaryHandler(db))
+	summary := tests.ParseSummary(t, resp)
+	currentBook, lastCompletedBook, totalBooksReadThisMonth,
+		totalBooksReadThisYear, totalCompletedBooks, totalUncompletedBooks :=
+		ParseReadingSummary(summary)
 
-    // Seed test data
-	parent := tests.CreateTestParent(db, "Alice", "alice@example.com", "password123")
-    child := tests.CreateTestChild(db, "Sophie", 10, parent.ID, "1234")
-    tests.SeedTestBooks(db, child.ID)
-
-    req, _ := http.NewRequest("GET", fmt.Sprintf("/children/%d/summary", child.ID), nil)
-    resp := httptest.NewRecorder()
-
-    router.ServeHTTP(resp, req)
-
-    assert.Equal(t, http.StatusOK, resp.Code)
-
-    var summary map[string]interface{}
-    err := json.Unmarshal(resp.Body.Bytes(), &summary)
-    assert.NoError(t, err)
-
-	currentBook, lastCompletedBook, booksCompletedThisMonth, booksCompletedThisYear, totalCompletedBooks, totalUncompletedBooks := ParseReadingSummary(summary)
-	// Structure checks
-    assert.Contains(t, summary, "currentBook")
-    assert.Contains(t, summary, "lastCompletedBook")
-    assert.Contains(t, summary, "booksCompletedThisMonth")
-    assert.Contains(t, summary, "booksCompletedThisYear")
-    assert.Contains(t, summary, "totalCompletedBooks")
-	assert.Contains(t, summary, "totalUncompletedBooks")
-
-	// ✅ Value checks (adjust these to match your seeded data)
-	assert.Equal(t, "Matilda", currentBook["title"])
-	assert.Equal(t, "The Worst Witch", lastCompletedBook["title"])
-	assert.Equal(t, 4, booksCompletedThisMonth)
-	assert.Equal(t, 8, booksCompletedThisYear)
-	assert.Equal(t, 9, totalCompletedBooks)
-	assert.Equal(t, 1, totalUncompletedBooks)
+	// Validate results
+	assert.Equal(t, 0, totalBooksReadThisMonth, "no books read this month")
+	assert.Equal(t, 0, totalBooksReadThisYear, "no books read this year")
+	assert.Equal(t, 0, totalCompletedBooks, "no total completed books")
+	assert.Equal(t, 0, totalUncompletedBooks, "no total uncompleted books")
+	assert.Nil(t, currentBook, "expected no current book")
+	assert.Nil(t, lastCompletedBook, "expected no last completed book")
 }
 
+// Only one book has been started by the child.
 func TestGetReadingSummary_OneStartedBook(t *testing.T) {
-    gin.SetMode(gin.TestMode)
-    router := gin.Default()
+	setup := tests.SetupSummaryTest()
 
-    db := tests.SetupTestDB()
+	setup.DB.Create(&models.ReadingLog{
+		ChildID: setup.Child.ID,
+		Title:   "Matilda",
+		Author:  "Roald Dahl",
+		Status:  "started",
+		Date:    time.Now(),
+	})
 
-    // Create parent and child
-    parent := tests.CreateTestParent(db, "Bob", "bob@example.com", "password123")
-    child := tests.CreateTestChild(db, "Charlie", 8, parent.ID, "5678")
+	resp := setup.GetSummary()
+	assert.Equal(t, http.StatusOK, resp.Code)
 
-    // Seed only one started book
-    db.Create(&models.ReadingLog{
-        ChildID: child.ID,
-        Title:   "Charlie and the Chocolate Factory",
-        Author:  "Roald Dahl",
-        Status:  "started",
-        Date:    time.Now(),
-    })
+	summary := tests.ParseSummary(t, resp)
+	currentBook, lastCompletedBook, totalBooksReadThisMonth,
+		totalBooksReadThisYear, totalCompletedBooks, totalUncompletedBooks :=
+		ParseReadingSummary(summary)
 
-    // Attach the handler
-    router.GET("/children/:id/summary", handlers.GetReadingSummaryHandler(db))
+	// ✅ Assertions
+	assert.NotNil(t, currentBook, "expected current book to be populated")
+	assert.Nil(t, lastCompletedBook, "expected no last completed book")
+	assert.Equal(t, 0, totalBooksReadThisMonth, "no books completed this month")
+	assert.Equal(t, 0, totalBooksReadThisYear, "no books completed this year")
+	assert.Equal(t, 0, totalCompletedBooks, "no total completed books")
+	assert.Equal(t, 1, totalUncompletedBooks, "one uncompleted book total")
+}
 
-    req, _ := http.NewRequest("GET", fmt.Sprintf("/children/%d/summary", child.ID), nil)
-    resp := httptest.NewRecorder()
-    router.ServeHTTP(resp, req)
+// Only one book has been completed by the child.
+func TestGetReadingSummary_OneCompletedBook(t *testing.T) {
+	setup := tests.SetupSummaryTest()
 
-    assert.Equal(t, http.StatusOK, resp.Code)
+	setup.DB.Create(&models.ReadingLog{
+		ChildID: setup.Child.ID,
+		Title:   "The Railway Children",
+		Author:  "E. B. Nesbit",
+		Status:  "completed",
+		Date:    time.Now(),
+	})
 
-    var summary map[string]interface{}
-    err := json.Unmarshal(resp.Body.Bytes(), &summary)
-    assert.NoError(t, err)
+	resp := setup.GetSummary()
+	assert.Equal(t, http.StatusOK, resp.Code)
 
-	currentBook, lastCompletedBook, booksCompletedThisMonth, booksCompletedThisYear, totalCompletedBooks, totalUncompletedBooks := ParseReadingSummary(summary)
+	summary := tests.ParseSummary(t, resp)
+	currentBook, lastCompletedBook, totalBooksReadThisMonth,
+		totalBooksReadThisYear, totalCompletedBooks, totalUncompletedBooks :=
+		ParseReadingSummary(summary)
 
-    // Check the fields
-    assert.Equal(t, "Charlie and the Chocolate Factory", currentBook["title"])
-    // Since no completed books:
-    assert.Nil(t, lastCompletedBook)
-    assert.Equal(t, 0, booksCompletedThisMonth)
-    assert.Equal(t, 0, booksCompletedThisYear)
-    assert.Equal(t, 0, totalCompletedBooks)
-    assert.Equal(t, 1, totalUncompletedBooks)
+	// ✅ Assertions
+	assert.Nil(t, currentBook, "expected no current book")
+	assert.NotNil(t, lastCompletedBook, "expected a last completes book")
+	assert.Equal(t, 1, totalBooksReadThisMonth, "no books completed this month")
+	assert.Equal(t, 1, totalBooksReadThisYear, "no books completed this year")
+	assert.Equal(t, 1, totalCompletedBooks, "no total completed books")
+	assert.Equal(t, 0, totalUncompletedBooks, "one uncompleted book total")
+}
+
+// One Book completed last month and one book completed this mmonth.
+func TestGetReadingSummary_CompletedBooksAcrossMonths(t *testing.T) {
+	setup := tests.SetupSummaryTest()
+
+	now := time.Now()
+	thisMonth := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+	lastMonth := thisMonth.AddDate(0, -1, 0) // first day of previous month
+
+	// 🪄 Add one book completed THIS month
+	setup.DB.Create(&models.ReadingLog{
+		ChildID: setup.Child.ID,
+		Title:   "Matilda",
+		Author:  "Roald Dahl",
+		Status:  "completed",
+		Date:    thisMonth,
+	})
+
+	// 🪄 Add one book completed LAST month
+	setup.DB.Create(&models.ReadingLog{
+		ChildID: setup.Child.ID,
+		Title:   "The BFG",
+		Author:  "Roald Dahl",
+		Status:  "completed",
+		Date:    lastMonth,
+	})
+
+	resp := setup.GetSummary()
+	assert.Equal(t, http.StatusOK, resp.Code)
+
+	summary := tests.ParseSummary(t, resp)
+	currentBook, lastCompletedBook, totalBooksReadThisMonth,
+		totalBooksReadThisYear, totalCompletedBooks, totalUncompletedBooks :=
+		ParseReadingSummary(summary)
+
+	// ✅ Assertions
+	assert.Nil(t, currentBook, "no current book should be set (all completed)")
+	assert.NotNil(t, lastCompletedBook, "expected a last completed book")
+
+	assert.Equal(t, 1, totalBooksReadThisMonth, "expected one book completed this month")
+	// totalBooksReadThisYear depends on whether lastMonth is in the same year
+	expectedBooksThisYear := 1
+	if lastMonth.Year() == thisMonth.Year() {
+		expectedBooksThisYear = 2
+	}
+	assert.Equal(t, expectedBooksThisYear, totalBooksReadThisYear, "total books completed this year")
+
+	assert.Equal(t, 2, totalCompletedBooks, "expected total of two completed books")
+	assert.Equal(t, 0, totalUncompletedBooks, "expected no uncompleted books")
+
+	assert.Equal(t, "Matilda", lastCompletedBook["title"], "expected Matilda to be last completed")
+}
+
+func TestGetReadingSummary_EightBooksThreeMonthsWithCurrent(t *testing.T) {
+	setup := tests.SetupSummaryTest()
+
+	today := time.Now()
+	currentYear := today.Year()
+	currentMonth := today.Month()
+
+	// Calculate months
+	firstOfThisMonth := time.Date(currentYear, currentMonth, 1, 0, 0, 0, 0, time.UTC)
+	lastMonth := firstOfThisMonth.AddDate(0, -1, 0)
+	twoMonthsAgo := firstOfThisMonth.AddDate(0, -2, 0)
+
+	// 🪄 All books in one slice
+	books := []models.ReadingLog{
+		// Current book in progress
+		{ChildID: setup.Child.ID, Title: "Charlotte's Web", Author: "E. B. White", Status: "started", Date: today},
+
+		// 3 completed books this month
+		{ChildID: setup.Child.ID, Title: "Matilda", Author: "Roald Dahl", Status: "completed", Date: today},
+		{ChildID: setup.Child.ID, Title: "The Worst Witch", Author: "Jill Murphy", Status: "completed", Date: today.AddDate(0, 0, -1)},
+		{ChildID: setup.Child.ID, Title: "The Tale of Peter Rabbit", Author: "Beatrix Potter", Status: "completed", Date: today.AddDate(0, 0, -2)},
+
+		// 3 completed books last month
+		{ChildID: setup.Child.ID, Title: "The BFG", Author: "Roald Dahl", Status: "completed", Date: lastMonth},
+		{ChildID: setup.Child.ID, Title: "Charlotte's Web", Author: "E. B. White", Status: "completed", Date: lastMonth.AddDate(0, 0, 1)},
+		{ChildID: setup.Child.ID, Title: "Fantastic Mr Fox", Author: "Roald Dahl", Status: "completed", Date: lastMonth.AddDate(0, 0, 2)},
+
+		// 2 completed books two months ago
+		{ChildID: setup.Child.ID, Title: "The Lion, the Witch and the Wardrobe", Author: "C. S. Lewis", Status: "completed", Date: twoMonthsAgo},
+		{ChildID: setup.Child.ID, Title: "The Secret Garden", Author: "Frances Hodgson Burnett", Status: "completed", Date: twoMonthsAgo.AddDate(0, 0, 1)},
+	}
+
+	// 🪄 Insert all books in one go
+	setup.DB.Create(&books)
+
+	// 🧭 GET summary
+	resp := setup.GetSummary()
+	assert.Equal(t, http.StatusOK, resp.Code)
+
+	summary := tests.ParseSummary(t, resp)
+	currentBook, lastCompletedBook, totalBooksReadThisMonth,
+		totalBooksReadThisYear, totalCompletedBooks, totalUncompletedBooks :=
+		ParseReadingSummary(summary)
+
+	// ✅ Assertions
+	assert.NotNil(t, currentBook, "expected a current book")
+	assert.Equal(t, "Charlotte's Web", currentBook["title"], "current book should be correct")
+	assert.NotNil(t, lastCompletedBook, "expected a last completed book")
+	assert.Equal(t, "Matilda", lastCompletedBook["title"], "last completed book should be most recent")
+
+	assert.Equal(t, 3, totalBooksReadThisMonth, "3 books completed this month")
+
+	// Calculate expected books this year
+	expectedThisYear := 0
+	for _, logDate := range []time.Time{
+		today, today.AddDate(0, 0, -1), today.AddDate(0, 0, -2), // this month
+		lastMonth, lastMonth.AddDate(0, 0, 1), lastMonth.AddDate(0, 0, 2), // last month
+		twoMonthsAgo, twoMonthsAgo.AddDate(0, 0, 1), // two months ago
+	} {
+		if logDate.Year() == currentYear {
+			expectedThisYear++
+		}
+	}
+	assert.Equal(t, expectedThisYear, totalBooksReadThisYear, "total books completed this year")
+	assert.Equal(t, 8, totalCompletedBooks, "total completed books")
+	assert.Equal(t, 1, totalUncompletedBooks, "one uncompleted book")
+}
+
+func TestGetReadingSummary_TwoStartedBooks(t *testing.T) {
+	setup := tests.SetupSummaryTest()
+
+	now := time.Now()
+
+	// Add two started books
+	setup.DB.Create(&models.ReadingLog{
+		ChildID: setup.Child.ID,
+		Title:   "Charlotte's Web",
+		Author:  "E. B. White",
+		Status:  "started",
+		Date:    now.AddDate(0, 0, -2), // started 2 days ago
+	})
+
+	setup.DB.Create(&models.ReadingLog{
+		ChildID: setup.Child.ID,
+		Title:   "Matilda",
+		Author:  "Roald Dahl",
+		Status:  "started",
+		Date:    now, // started today
+	})
+
+	resp := setup.GetSummary()
+	assert.Equal(t, http.StatusOK, resp.Code)
+
+	// Parse response
+	summary := tests.ParseSummary(t, resp)
+	currentBook, lastCompletedBook, totalBooksReadThisMonth,
+		totalBooksReadThisYear, totalCompletedBooks, totalUncompletedBooks :=
+		ParseReadingSummary(summary)
+
+	// Assertions
+	assert.NotNil(t, currentBook, "expected current book to be populated")
+	assert.Nil(t, lastCompletedBook, "expected no last completed book")
+
+	// The latest started book should be returned
+	assert.Equal(t, "Matilda", currentBook["title"], "expected Matilda to be the current book")
+
+	assert.Equal(t, 0, totalBooksReadThisMonth)
+	assert.Equal(t, 0, totalBooksReadThisYear)
+	assert.Equal(t, 0, totalCompletedBooks)
+	assert.Equal(t, 2, totalUncompletedBooks)
 }

@@ -38,7 +38,7 @@ const Login = () => {
             const data = await res.json();
             // Store the token securely
             localStorage.setItem('parentToken', data.token);
-            router.push('/dashboard'); // Redirect to parent dashboard
+            router.push('/parent-dashboard'); // Redirect to parent dashboard
         } catch (err: any) {
             setError("Failed to login: " + err.message);
         }

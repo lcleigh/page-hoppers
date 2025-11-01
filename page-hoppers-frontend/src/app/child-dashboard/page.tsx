@@ -40,11 +40,11 @@ export default function ChildDashboard() {
     setSelectedDate(new Date().toISOString().split('T')[0]);
   }, [router]);
 
-  const handleLogout = () => {
+  const handleChildLogout = () => {
     localStorage.removeItem('childToken');
     localStorage.removeItem('childId');
     localStorage.removeItem('childName');
-    router.push('/');
+    router.push('/parent-dashboard');
   };
 
   const handleLogBook = (book: BookResult) => {
@@ -166,7 +166,7 @@ export default function ChildDashboard() {
     <div className="min-h-screen flex flex-col items-center justify-center bg-powder relative">
       {/* Logout button in top-right corner */}
       <button
-        onClick={handleLogout}
+        onClick={handleChildLogout}
         className="absolute top-4 right-4 px-4 py-2 bg-coral text-white font-bold rounded-xl hover:bg-bubblegum hover:text-white transition border-2 border-coral"
       >
         Logout
@@ -344,7 +344,7 @@ export default function ChildDashboard() {
         {logError && <div className="text-coral text-lg mt-4">{logError}</div>}
         
         <button
-          onClick={() => router.push('/dashboard')}
+          onClick={handleChildLogout}
           className="mt-6 px-6 py-2 bg-sky text-charcoal font-bold rounded-xl hover:bg-lemon hover:text-bubblegum transition border-2 border-bubblegum"
         >
           Back to Parent Dashboard

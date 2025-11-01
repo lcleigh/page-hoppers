@@ -1,4 +1,4 @@
-// app/dashboard/page.tsx
+// app/parent-dashboard/page.tsx
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';

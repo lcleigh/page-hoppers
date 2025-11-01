@@ -150,10 +150,10 @@ The frontend will be available at `http://localhost:3000`
 
 1. **Database & Backend (Docker Compose):**
    ```bash
-   docker-compose up
+   docker compose up
    ```
 
-2. **Backend (Local Option):**
+1. **Backend (Local Option):**
    ```bash
    cd page-hoppers-backend
    go run main.go

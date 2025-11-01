@@ -15,7 +15,7 @@ interface ReadingSummary {
   totalBooksReadThisMonth: number;
   totalBooksReadThisYear: number;
   totalUncompletedBooks: number;
-  totalComplatedBooks: number;
+  totalCompletedBooks: number;
 }
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL;
@@ -106,7 +106,7 @@ export default function ReadingSummaryCard() {
               <div className="text-sm text-coolgray">Total Books Unfinished</div>
             </div>
             <div className="bg-lemon/30 p-3 rounded-xl border-2 border-lemon text-center col-span-2">
-              <div className="font-bold text-charcoal text-lg">{summary.totalComplatedBooks}</div>
+              <div className="font-bold text-charcoal text-lg">{summary.totalCompletedBooks}</div>
               <div className="text-sm text-coolgray">Total Books Read</div>
             </div>
           </div>

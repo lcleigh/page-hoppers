@@ -1,2 +1,7 @@
 # Ignore environment files
 .env
+
+# Backend
+page-hoppers-backend/tmp/
+
+# Frontend
